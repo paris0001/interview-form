@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>30分面接予約フォーム</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      max-width: 640px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 28px 28px 24px;
+      text-align: center;
+    }
+    .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .header p { font-size: 13px; opacity: 0.9; }
+
+    .form-body { padding: 28px; }
+
+    /* ── Progress ── */
+    .progress-bar {
+      display: flex;
+      margin-bottom: 28px;
+      gap: 4px;
+    }
+    .progress-step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    .progress-step .bar {
+      height: 4px;
+      background: #e8e8e8;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .progress-step .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .progress-step.done .bar-fill { width: 100%; }
+    .progress-step.active .bar-fill { width: 50%; }
+    .progress-step .label {
+      font-size: 11px;
+      color: #aaa;
+      transition: color 0.3s;
+    }
+    .progress-step.done .label,
+    .progress-step.active .label { color: #667eea; font-weight: 600; }
+
+    /* ── Steps ── */
+    .step { display: none; }
+    .step.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 20px;
+    }
+
+    /* ── Wish Tabs ── */
+    .wish-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .wish-tab {
+      flex: 1;
+      padding: 10px 4px;
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+      font-weight: 600;
+      color: #aaa;
+      background: #fafafa;
+      position: relative;
+    }
+    .wish-tab:hover { border-color: #ccc; }
+    .wish-tab.active {
+      border-color: #667eea;
+      color: #667eea;
+      background: #f0f2ff;
+    }
+    .wish-tab.filled::after {
+      content: '✓';
+      position: absolute;
+      top: -6px;
+      right: -4px;
+      width: 18px;
+      height: 18px;
+      background: #4caf50;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wish-tab .tab-label { font-size: 11px; color: #bbb; display: block; margin-bottom: 2px; }
+    .wish-tab.active .tab-label { color: #667eea; }
+    .wish-tab.filled .tab-label { color: #4caf50; }
+    .wish-tab .tab-value {
+      font-size: 12px;
+      min-height: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Calendar ── */
+    .calendar {
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f8f9fa;
+    }
+    .calendar-header button {
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .calendar-header button:hover {
+      background: #667eea;
+      color: #fff;
+      border-color: #667eea;
+    }
+    .calendar-header button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .calendar-header button:disabled:hover {
+      background: none;
+      color: #555;
+      border-color: #ddd;
+    }
+    .calendar-month { font-size: 15px; font-weight: 600; color: #333; }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .calendar-day-header {
+      padding: 8px 4px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      background: #f8f9fa;
+    }
+    .calendar-day-header:first-child { color: #e74c3c; }
+    .calendar-day-header:last-child { color: #3498db; }
+    .calendar-day {
+      padding: 9px 4px;
+      text-align: center;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .calendar-day:hover:not(.disabled):not(.empty) {
+      background: #f0f0ff;
+      border-radius: 8px;
+    }
+    .calendar-day.selected {
+      background: #667eea;
+      color: #fff !important;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .calendar-day.today { font-weight: 700; color: #667eea; }
+    .calendar-day.today::after {
+      content: '';
+      position: absolute;
+      bottom: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #667eea;
+    }
+    .calendar-day.today.selected::after { background: #fff; }
+    .calendar-day.disabled { color: #ccc; cursor: not-allowed; }
+    .calendar-day.empty { cursor: default; }
+    .calendar-day.sunday { color: #e74c3c; }
+    .calendar-day.saturday { color: #3498db; }
+    .calendar-day.sunday.disabled,
+    .calendar-day.saturday.disabled { opacity: 0.4; }
+
+    /* ── Time Slots ── */
+    .time-slots-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+    }
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      max-height: 240px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    @media (max-width: 480px) {
+      .time-slots { grid-template-columns: repeat(3, 1fr); }
+    }
+    .time-slot {
+      padding: 10px 4px;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+      color: #555;
+    }
+    .time-slot:hover {
+      border-color: #667eea;
+      background: #f8f8ff;
+      color: #667eea;
+    }
+    .time-slot.selected {
+      background: #667eea;
+      color: #fff;
+      border-color: #667eea;
+      font-weight: 600;
+    }
+
+    /* ── Form Inputs ── */
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+    }
+    .form-group label .required { color: #e74c3c; margin-left: 3px; }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+    }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    /* ── Wish Summary Cards ── */
+    .wish-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .wish-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #f8f9ff;
+      border: 1px solid #e0e4ff;
+    }
+    .wish-card .badge {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .wish-card:nth-child(1) .badge { background: #667eea; }
+    .wish-card:nth-child(2) .badge { background: #f59e0b; }
+    .wish-card:nth-child(3) .badge { background: #10b981; }
+    .wish-card .wish-text { font-size: 13px; color: #444; font-weight: 500; }
+
+    /* ── Confirm ── */
+    .confirm-section {
+      background: #f8f9ff;
+      border: 1px solid #e0e4ff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .confirm-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .confirm-row {
+      display: flex;
+      padding: 6px 0;
+      border-bottom: 1px solid #eef0ff;
+    }
+    .confirm-row:last-child { border-bottom: none; }
+    .confirm-label { width: 90px; font-size: 12px; color: #888; flex-shrink: 0; }
+    .confirm-value { font-size: 13px; color: #333; font-weight: 500; }
+
+    /* ── Buttons ── */
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn {
+      flex: 1;
+      padding: 13px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-secondary { background: #f0f0f0; color: #555; }
+    .btn-secondary:hover { background: #e0e0e0; }
+
+    /* ── Success ── */
+    .success-view {
+      text-align: center;
+      padding: 40px 20px;
+      display: none;
+    }
+    .success-view.active {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+    .success-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #4caf50, #66bb6a);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 36px;
+      color: #fff;
+    }
+    .success-view h2 { font-size: 20px; color: #333; margin-bottom: 10px; }
+    .success-view p { font-size: 13px; color: #777; line-height: 1.7; }
+
+    /* ── Loading ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .loading-overlay.active { display: flex; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-msg {
+      color: #e74c3c;
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+    .form-group.error input,
+    .form-group.error textarea {
+      border-color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>30分面接予約</h1>
+      <p>第三希望まで日時を選んでください（所要時間：約1分）</p>
+    </div>
+
+    <div class="form-body" id="formBody">
+      <!-- Progress -->
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-step active" data-step="1">
+          <div class="bar"><div class="bar-fill"></div></div>
+          <div class="label">日時選択</div>
+        </div>
+        <div class="progress-step" data-step="2">
+          <div class="bar"><div class="bar-fill"></div></div>
+          <div class="label">お名前等</div>
+        </div>
+        <div class="progress-step" data-step="3">
+          <div class="bar"><div class="bar-fill"></div></div>
+          <div class="label">確認・送信</div>
+        </div>
+      </div>
+
+      <!-- Step 1: 第一〜第三希望の日時選択 -->
+      <div class="step active" id="step1">
+        <div class="step-title">希望日時を選んでください</div>
+        <div class="step-desc">日付を選び、時間をタップすると登録されます</div>
+
+        <!-- Wish Tabs -->
+        <div class="wish-tabs" id="wishTabs">
+          <div class="wish-tab active" data-wish="0">
+            <span class="tab-label">第1希望</span>
+            <span class="tab-value" id="wishLabel0">未選択</span>
+          </div>
+          <div class="wish-tab" data-wish="1">
+            <span class="tab-label">第2希望</span>
+            <span class="tab-value" id="wishLabel1">未選択</span>
+          </div>
+          <div class="wish-tab" data-wish="2">
+            <span class="tab-label">第3希望</span>
+            <span class="tab-value" id="wishLabel2">未選択</span>
+          </div>
+        </div>
+
+        <!-- Calendar -->
+        <div class="calendar">
+          <div class="calendar-header">
+            <button id="prevMonth">◀ 前月</button>
+            <span class="calendar-month" id="calendarMonth"></span>
+            <button id="nextMonth">翌月 ▶</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <!-- Time Slots (shown after date pick) -->
+        <div id="timeArea" style="display:none; margin-top: 12px;">
+          <div class="time-slots-label" id="timeSlotsLabel"></div>
+          <div class="time-slots" id="timeSlots"></div>
+        </div>
+
+        <div id="step1Error" class="error-msg" style="margin-top:12px;"></div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="toStep2" disabled>次へ → お名前等の入力</button>
+        </div>
+      </div>
+
+      <!-- Step 2: 個人情報入力 -->
+      <div class="step" id="step2">
+        <div class="step-title">お名前等を入力してください</div>
+        <div class="step-desc">面接のご連絡に使用します</div>
+
+        <div class="wish-summary" id="wishSummary"></div>
+
+        <div class="form-group" id="nameGroup">
+          <label>お名前<span class="required">*</span></label>
+          <input type="text" id="inputName" placeholder="山田 太郎">
+          <div class="error-msg" id="nameError">お名前を入力してください</div>
+        </div>
+        <div class="form-group" id="emailGroup">
+          <label>メールアドレス<span class="required">*</span></label>
+          <input type="email" id="inputEmail" placeholder="example@email.com">
+          <div class="error-msg" id="emailError">正しいメールアドレスを入力してください</div>
+        </div>
+        <div class="form-group">
+          <label>電話番号</label>
+          <input type="tel" id="inputPhone" placeholder="090-1234-5678">
+        </div>
+        <div class="form-group">
+          <label>備考・ご質問</label>
+          <textarea id="inputNote" placeholder="事前にお伝えしたいことがあればご記入ください"></textarea>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="backToStep1">← 戻る</button>
+          <button class="btn btn-primary" id="toStep3">確認画面へ</button>
+        </div>
+      </div>
+
+      <!-- Step 3: 確認 -->
+      <div class="step" id="step3">
+        <div class="step-title">予約内容をご確認ください</div>
+        <div class="step-desc">内容に問題なければ送信してください</div>
+        <div id="confirmContent"></div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="backToStep2">← 戻る</button>
+          <button class="btn btn-primary" id="submitBtn">この内容で予約する</button>
+        </div>
+      </div>
+
+      <!-- Success -->
+      <div class="success-view" id="successView">
+        <div class="success-icon">✓</div>
+        <h2>予約が完了しました！</h2>
+        <p>
+          ご予約ありがとうございます。<br>
+          担当者より折り返しご連絡いたします。<br>
+          しばらくお待ちください。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    // ==========================================
+    // Google フォーム設定
+    // ※ 実際のGoogleフォームの値に差し替えてください
+    // ==========================================
+    const GOOGLE_FORM_ACTION_URL = 'YOUR_GOOGLE_FORM_ACTION_URL';
+    const ENTRY_IDS = {
+      wish1: 'entry.XXXXXXX1',   // 第1希望
+      wish2: 'entry.XXXXXXX2',   // 第2希望
+      wish3: 'entry.XXXXXXX3',   // 第3希望
+      name:  'entry.XXXXXXX4',   // お名前
+      email: 'entry.XXXXXXX5',   // メールアドレス
+      phone: 'entry.XXXXXXX6',   // 電話番号
+      note:  'entry.XXXXXXX7'    // 備考
+    };
+
+    // 時間帯（9:00〜24:00、30分刻み）
+    const TIME_SLOTS = [];
+    for (let h = 9; h < 24; h++) {
+      const h2 = h + 1 === 24 ? 0 : h + 1;
+      TIME_SLOTS.push(`${String(h).padStart(2,'0')}:00〜${String(h).padStart(2,'0')}:30`);
+      TIME_SLOTS.push(`${String(h).padStart(2,'0')}:30〜${String(h2).padStart(2,'0')}:00`);
+    }
+
+    // ==========================================
+    // State
+    // ==========================================
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let currentMonth = new Date();
+    let activeWish = 0; // 0, 1, 2
+    let tempDate = null; // 現在のタブで選択中の日付
+
+    // wishes[0], wishes[1], wishes[2] = { date: Date, time: string } or null
+    const wishes = [null, null, null];
+
+    // ==========================================
+    // Utility
+    // ==========================================
+    function formatDate(date) {
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const dow = ['日','月','火','水','木','金','土'][date.getDay()];
+      return `${m}/${d}（${dow}）`;
+    }
+    function formatDateLong(date) {
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const dow = ['日','月','火','水','木','金','土'][date.getDay()];
+      return `${y}年${m}月${d}日（${dow}）`;
+    }
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // ==========================================
+    // Wish Tabs
+    // ==========================================
+    function updateWishTabs() {
+      document.querySelectorAll('.wish-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === activeWish);
+        tab.classList.toggle('filled', wishes[i] !== null);
+        const label = document.getElementById(`wishLabel${i}`);
+        if (wishes[i]) {
+          label.textContent = `${formatDate(wishes[i].date)} ${wishes[i].time.split('〜')[0]}`;
+        } else {
+          label.textContent = '未選択';
+        }
+      });
+
+      // Enable next button if at least first wish is filled
+      document.getElementById('toStep2').disabled = !wishes[0];
+
+      // Update error
+      document.getElementById('step1Error').classList.remove('show');
+    }
+
+    document.querySelectorAll('.wish-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        activeWish = parseInt(tab.dataset.wish);
+        // Restore temp state from this wish
+        if (wishes[activeWish]) {
+          tempDate = new Date(wishes[activeWish].date);
+          currentMonth = new Date(tempDate.getFullYear(), tempDate.getMonth(), 1);
+        } else {
+          tempDate = null;
+        }
+        updateWishTabs();
+        renderCalendar();
+        renderTimeSlots();
+      });
+    });
+
+    // ==========================================
+    // Calendar
+    // ==========================================
+    function renderCalendar() {
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      document.getElementById('calendarMonth').textContent = `${year}年 ${month + 1}月`;
+
+      const prevBtn = document.getElementById('prevMonth');
+      const todayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      prevBtn.disabled = new Date(year, month, 1) <= todayMonth;
+
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      ['日','月','火','水','木','金','土'].forEach(name => {
+        const el = document.createElement('div');
+        el.className = 'calendar-day-header';
+        el.textContent = name;
+        grid.appendChild(el);
+      });
+
+      for (let i = 0; i < firstDay; i++) {
+        const el = document.createElement('div');
+        el.className = 'calendar-day empty';
+        grid.appendChild(el);
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const el = document.createElement('div');
+        const date = new Date(year, month, day);
+        const isPast = date < today;
+        const isToday = date.getTime() === today.getTime();
+        const dayOfWeek = date.getDay();
+
+        let cls = 'calendar-day';
+        if (isPast) cls += ' disabled';
+        if (isToday) cls += ' today';
+        if (dayOfWeek === 0) cls += ' sunday';
+        if (dayOfWeek === 6) cls += ' saturday';
+
+        if (tempDate &&
+            tempDate.getFullYear() === year &&
+            tempDate.getMonth() === month &&
+            tempDate.getDate() === day) {
+          cls += ' selected';
+        }
+
+        el.className = cls;
+        el.textContent = day;
+
+        if (!isPast) {
+          el.addEventListener('click', () => {
+            tempDate = new Date(year, month, day);
+            // Clear time if date changed for this wish
+            if (wishes[activeWish] &&
+                wishes[activeWish].date.getTime() !== tempDate.getTime()) {
+              wishes[activeWish] = null;
+            }
+            renderCalendar();
+            renderTimeSlots();
+          });
+        }
+        grid.appendChild(el);
+      }
+    }
+
+    document.getElementById('prevMonth').addEventListener('click', () => {
+      currentMonth.setMonth(currentMonth.getMonth() - 1);
+      renderCalendar();
+    });
+    document.getElementById('nextMonth').addEventListener('click', () => {
+      currentMonth.setMonth(currentMonth.getMonth() + 1);
+      renderCalendar();
+    });
+
+    // ==========================================
+    // Time Slots
+    // ==========================================
+    function renderTimeSlots() {
+      const area = document.getElementById('timeArea');
+      const container = document.getElementById('timeSlots');
+      const label = document.getElementById('timeSlotsLabel');
+
+      if (!tempDate) {
+        area.style.display = 'none';
+        return;
+      }
+
+      area.style.display = 'block';
+      const wishNames = ['第1希望','第2希望','第3希望'];
+      label.textContent = `${formatDate(tempDate)} の時間を選択 → ${wishNames[activeWish]}`;
+      container.innerHTML = '';
+
+      const currentTime = wishes[activeWish]?.time || null;
+
+      TIME_SLOTS.forEach(slot => {
+        const el = document.createElement('div');
+        el.className = 'time-slot';
+        if (currentTime === slot &&
+            wishes[activeWish]?.date.getTime() === tempDate.getTime()) {
+          el.classList.add('selected');
+        }
+        el.textContent = slot;
+        el.addEventListener('click', () => {
+          wishes[activeWish] = { date: new Date(tempDate), time: slot };
+          updateWishTabs();
+          renderTimeSlots();
+
+          // Auto-advance to next unfilled wish
+          if (activeWish < 2) {
+            const nextEmpty = wishes.findIndex((w, i) => i > activeWish && w === null);
+            if (nextEmpty !== -1) {
+              setTimeout(() => {
+                activeWish = nextEmpty;
+                tempDate = null;
+                updateWishTabs();
+                renderCalendar();
+                renderTimeSlots();
+              }, 300);
+            }
+          }
+        });
+        container.appendChild(el);
+      });
+    }
+
+    // ==========================================
+    // Navigation
+    // ==========================================
+    function goToStep(step) {
+      document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+      document.getElementById(`step${step}`).classList.add('active');
+
+      document.querySelectorAll('.progress-step').forEach(ps => {
+        const s = parseInt(ps.dataset.step);
+        ps.classList.remove('active', 'done');
+        if (s < step) ps.classList.add('done');
+        else if (s === step) ps.classList.add('active');
+      });
+
+      // Scroll to top of form
+      document.querySelector('.container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Step 1 → 2
+    document.getElementById('toStep2').addEventListener('click', () => {
+      if (!wishes[0]) {
+        document.getElementById('step1Error').textContent = '第1希望を選択してください';
+        document.getElementById('step1Error').classList.add('show');
+        return;
+      }
+      renderWishSummary();
+      goToStep(2);
+    });
+
+    // Step 2 → 3
+    document.getElementById('toStep3').addEventListener('click', () => {
+      let valid = true;
+      const name = document.getElementById('inputName').value.trim();
+      const email = document.getElementById('inputEmail').value.trim();
+
+      // Reset errors
+      document.getElementById('nameGroup').classList.remove('error');
+      document.getElementById('emailGroup').classList.remove('error');
+      document.getElementById('nameError').classList.remove('show');
+      document.getElementById('emailError').classList.remove('show');
+
+      if (!name) {
+        document.getElementById('nameGroup').classList.add('error');
+        document.getElementById('nameError').classList.add('show');
+        valid = false;
+      }
+      if (!email || !isValidEmail(email)) {
+        document.getElementById('emailGroup').classList.add('error');
+        document.getElementById('emailError').classList.add('show');
+        valid = false;
+      }
+      if (!valid) return;
+
+      renderConfirmation();
+      goToStep(3);
+    });
+
+    document.getElementById('backToStep1').addEventListener('click', () => goToStep(1));
+    document.getElementById('backToStep2').addEventListener('click', () => goToStep(2));
+
+    // ==========================================
+    // Render Helpers
+    // ==========================================
+    function renderWishSummary() {
+      const container = document.getElementById('wishSummary');
+      const labels = ['1', '2', '3'];
+      container.innerHTML = wishes
+        .map((w, i) => {
+          if (!w) return '';
+          return `<div class="wish-card">
+            <div class="badge">${labels[i]}</div>
+            <div class="wish-text">${formatDateLong(w.date)}  ${w.time}</div>
+          </div>`;
+        })
+        .filter(Boolean)
+        .join('');
+    }
+
+    function renderConfirmation() {
+      const name = document.getElementById('inputName').value.trim();
+      const email = document.getElementById('inputEmail').value.trim();
+      const phone = document.getElementById('inputPhone').value.trim();
+      const note = document.getElementById('inputNote').value.trim();
+      const labels = ['第1希望', '第2希望', '第3希望'];
+
+      let html = '<div class="confirm-section"><div class="confirm-section-title">希望日時</div>';
+      wishes.forEach((w, i) => {
+        if (!w) return;
+        html += `<div class="confirm-row">
+          <div class="confirm-label">${labels[i]}</div>
+          <div class="confirm-value">${formatDateLong(w.date)}  ${w.time}</div>
+        </div>`;
+      });
+      html += '</div>';
+
+      html += '<div class="confirm-section"><div class="confirm-section-title">お客様情報</div>';
+      html += `<div class="confirm-row">
+        <div class="confirm-label">お名前</div>
+        <div class="confirm-value">${escapeHtml(name)}</div>
+      </div>`;
+      html += `<div class="confirm-row">
+        <div class="confirm-label">メール</div>
+        <div class="confirm-value">${escapeHtml(email)}</div>
+      </div>`;
+      if (phone) {
+        html += `<div class="confirm-row">
+          <div class="confirm-label">電話番号</div>
+          <div class="confirm-value">${escapeHtml(phone)}</div>
+        </div>`;
+      }
+      if (note) {
+        html += `<div class="confirm-row">
+          <div class="confirm-label">備考</div>
+          <div class="confirm-value">${escapeHtml(note)}</div>
+        </div>`;
+      }
+      html += '</div>';
+
+      document.getElementById('confirmContent').innerHTML = html;
+    }
+
+    // ==========================================
+    // Submit
+    // ==========================================
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      const name = document.getElementById('inputName').value.trim();
+      const email = document.getElementById('inputEmail').value.trim();
+      const phone = document.getElementById('inputPhone').value.trim();
+      const note = document.getElementById('inputNote').value.trim();
+
+      const loading = document.getElementById('loadingOverlay');
+      loading.classList.add('active');
+
+      const fmtWish = (w) => w ? `${formatDateLong(w.date)} ${w.time}` : '';
+
+      const formData = new URLSearchParams();
+      formData.append(ENTRY_IDS.wish1, fmtWish(wishes[0]));
+      formData.append(ENTRY_IDS.wish2, fmtWish(wishes[1]));
+      formData.append(ENTRY_IDS.wish3, fmtWish(wishes[2]));
+      formData.append(ENTRY_IDS.name, name);
+      formData.append(ENTRY_IDS.email, email);
+      formData.append(ENTRY_IDS.phone, phone || '');
+      formData.append(ENTRY_IDS.note, note || '');
+
+      fetch(GOOGLE_FORM_ACTION_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      })
+      .then(() => { loading.classList.remove('active'); showSuccess(); })
+      .catch(() => { loading.classList.remove('active'); showSuccess(); });
+    });
+
+    function showSuccess() {
+      document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+      document.getElementById('progressBar').style.display = 'none';
+      document.getElementById('successView').classList.add('active');
+    }
+
+    // ==========================================
+    // Init
+    // ==========================================
+    updateWishTabs();
+    renderCalendar();
+  </script>
+</body>
+</html>
